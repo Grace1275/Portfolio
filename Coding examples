@@ -1,0 +1,158 @@
+import pygame
+import random
+
+# Initialize Pygame
+pygame.init()
+
+# Set up display
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Coding Quiz")
+
+# Colors
+PINK = (255, 182, 193)  # Pink background
+PURPLE = (138, 43, 226)  # Pretty shade of purple for text
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+
+# Font
+font = pygame.font.Font(pygame.font.match_font("comic sans ms"), 28)
+
+
+# Define a Question class
+class Question:
+    def __init__(self, question_text, options, correct_answer):
+        self.question_text = question_text
+        self.options = options
+        self.correct_answer = correct_answer
+        self.correct_option_letter = None  # Will store 'A', 'B', 'C', 'D'
+
+    def shuffle_options(self):
+        # Shuffle options and find the new position of the correct answer
+        options_with_keys = list(zip(self.options, ["A", "B", "C", "D"]))
+        random.shuffle(options_with_keys)
+        self.options, keys = zip(*options_with_keys)
+        self.correct_option_letter = keys[self.options.index(self.correct_answer)]
+
+    def check_answer(self, user_answer):
+        return user_answer == self.correct_option_letter
+
+
+# Define a Quiz class
+class Quiz:
+    def __init__(self):
+        # Original five questions
+        self.questions = [
+            Question("What keyword is used to define a function in Python?", ["def", "func", "lambda", "define"],
+                     "def"),
+            Question("Which SQL statement is used to retrieve data?", ["SELECT", "FETCH", "GET", "SHOW"], "SELECT"),
+            Question("What symbol starts a comment in Python?", ["#", "//", "--", "/*"], "#"),
+            Question("How do you create a new list in Python?", ["[]", "()", "{}", "<>"], "[]"),
+            Question("What SQL clause is used to filter results?", ["WHERE", "FILTER", "HAVING", "LIMIT"], "WHERE"),
+        ]
+        for question in self.questions:
+            question.shuffle_options()  # Shuffle options for each question
+
+        random.shuffle(self.questions)  # Shuffle the question order
+        self.score = 0
+        self.current_question = 0
+
+    def get_current_question(self):
+        return self.questions[self.current_question]
+
+    def check_current_answer(self, user_answer):
+        question = self.get_current_question()
+        is_correct = question.check_answer(user_answer)
+        if is_correct:
+            self.score += 1
+        self.current_question += 1
+        return is_correct
+
+
+# Main game loop
+def main():
+    quiz = Quiz()
+    clock = pygame.time.Clock()
+    running = True
+    in_instructions = True  # Initial instruction screen
+    feedback = ""
+    feedback_color = PURPLE
+
+    while running:
+        screen.fill(PINK)  # Set the background to pink
+
+        if in_instructions:
+            # Display instructions
+            instructions = [
+                "Welcome to the Coding Quiz!",
+                "Answer 3 out of 5 questions correctly to pass.",
+                "Use the A, B, C, or D keys to select your answer.",
+                "Press Enter to start the quiz!",
+            ]
+            y_offset = 100
+            for line in instructions:
+                instruction_surface = font.render(line, True, PURPLE)
+                screen.blit(instruction_surface, (50, y_offset))
+                y_offset += 50
+        elif quiz.current_question < len(quiz.questions):
+            # Display current question
+            question = quiz.get_current_question()
+            question_surface = font.render(question.question_text, True, PURPLE)
+            screen.blit(question_surface, (50, 100))
+
+            # Display answer options
+            options = ["A", "B", "C", "D"]
+            for i, option in enumerate(question.options):
+                option_text = f"{options[i]}. {option}"
+                option_surface = font.render(option_text, True, PURPLE)
+                screen.blit(option_surface, (50, 200 + i * 50))
+        else:
+            # Display final score and message
+            result_text = f"Quiz completed! You scored {quiz.score} out of {len(quiz.questions)}."
+            result_surface = font.render(result_text, True, PURPLE)
+            screen.blit(result_surface, (50, 100))
+
+            if quiz.score >= 3:
+                message = "Well done, You Passed!"
+                message_color = GREEN
+            else:
+                message = "Too bad! Try Again!"
+                message_color = RED
+            message_surface = font.render(message, True, message_color)
+            screen.blit(message_surface, (50, 200))
+
+        # Display feedback (correct/incorrect answer)
+        if feedback:
+            feedback_surface = font.render(feedback, True, feedback_color)
+            screen.blit(feedback_surface, (50, 500))
+
+        # Event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if in_instructions and event.key == pygame.K_RETURN:
+                    in_instructions = False
+                elif not in_instructions and quiz.current_question < len(quiz.questions):
+                    # Handle answer selection
+                    if event.key in [pygame.K_a, pygame.K_b, pygame.K_c, pygame.K_d]:
+                        answer = chr(event.key).upper()
+                        if quiz.check_current_answer(answer):
+                            feedback = "Correct!"
+                            feedback_color = GREEN
+                        else:
+                            correct_option = quiz.get_current_question().correct_option_letter
+                            feedback = f"Incorrect! The correct answer was: {correct_option}."
+                            feedback_color = RED
+                    else:
+                        feedback = ""
+
+        pygame.display.flip()
+        clock.tick(30)
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
